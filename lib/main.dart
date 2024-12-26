@@ -31,7 +31,6 @@ class MacOSDock extends StatelessWidget {
   }
 }
 
-
 class Dock extends StatefulWidget {
   const Dock({super.key});
 
@@ -44,9 +43,6 @@ class _DockState extends State<Dock> {
   int draggedIndex = -1;
   List<String> minimizedApps = [];
   bool isMinimized = false;
-
-  
-   
 
   final List<Map<String, dynamic>> icons = [
     {'icon': Icons.home, 'label': 'Home'},
@@ -67,8 +63,6 @@ class _DockState extends State<Dock> {
     });
   }
 
-  
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -80,12 +74,12 @@ class _DockState extends State<Dock> {
             padding: const EdgeInsets.only(bottom: 10.0),
             child: Row(
               mainAxisSize: MainAxisSize.min,
-              children: minimizedApps.map((app) {
+              children: minimizedApps.map((String app) {
                 return GestureDetector(
                   onTap: () => restoreApp(app),
                   child: Container(
-                    margin: EdgeInsets.symmetric(horizontal: 8.0),
-                    padding: EdgeInsets.all(8.0),
+                    margin: const EdgeInsets.symmetric(horizontal: 8.0),
+                    padding: const EdgeInsets.all(8.0),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(10),
@@ -95,7 +89,7 @@ class _DockState extends State<Dock> {
                     ),
                     child: Text(
                       app,
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                   ),
                 );
@@ -105,7 +99,7 @@ class _DockState extends State<Dock> {
 
         // Dock Section
         AnimatedContainer(
-          duration: Duration(milliseconds: 1500),
+          duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
           width: isMinimized ? 60 : null,
           child: Stack(
@@ -115,7 +109,7 @@ class _DockState extends State<Dock> {
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
                   child: Container(
-                    margin: EdgeInsets.only(bottom: 20),
+                    margin: const EdgeInsets.only(bottom: 20),
                     padding: EdgeInsets.symmetric(
                       vertical: 10,
                       horizontal: isMinimized ? 10 : 20,
@@ -123,8 +117,8 @@ class _DockState extends State<Dock> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                            Colors.white.withAlpha(51), // 0.2 * 255 = 51
-                            Colors.white.withAlpha(13), // 0.05 * 255 = 13
+                          Colors.white.withAlpha(51),
+                          Colors.white.withAlpha(13),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -134,14 +128,11 @@ class _DockState extends State<Dock> {
                         width: 1.5,
                       ),
                       borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        // BoxShadow(color: Colors.black26, blurRadius: 10),
-                      ],
                     ),
                     child: AnimatedSwitcher(
-                      duration: Duration(milliseconds: 300),
+                      duration: const Duration(milliseconds: 300),
                       child: isMinimized
-                          ? Icon(
+                          ? const Icon(
                               Icons.more_vert,
                               color: Colors.white,
                               size: 24,
@@ -150,25 +141,25 @@ class _DockState extends State<Dock> {
                               mainAxisSize: MainAxisSize.min,
                               children: List.generate(icons.length, (index) {
                                 return DragTarget<Map<String, dynamic>>(
-                                  onAccept: (data) {
+                                  onAcceptWithDetails: (details) {
                                     setState(() {
-                                      icons.remove(data);
-                                      icons.insert(index, data);
+                                      icons.remove(details.data);
+                                      icons.insert(index, details.data);
                                       draggedIndex = -1;
                                     });
                                   },
-                                  onWillAccept: (data) {
+                                  onWillAcceptWithDetails: (data) {
                                     setState(() => draggedIndex = index);
                                     return true;
                                   },
                                   builder: (context, candidateData, rejectedData) {
                                     return AnimatedContainer(
-                                      duration: Duration(milliseconds: 300),
+                                      duration: const Duration(milliseconds: 100),
                                       curve: Curves.easeInOut,
                                       margin: draggedIndex == index
-                                          ? EdgeInsets.symmetric(horizontal: 20.0)
-                                          : EdgeInsets.symmetric(horizontal: 8.0),
-                                      child: Draggable<Map<String, dynamic>>(
+                                          ? const EdgeInsets.symmetric(horizontal: 20.0)
+                                          : const EdgeInsets.symmetric(horizontal: 8.0),
+                                      child: LongPressDraggable<Map<String, dynamic>>(
                                         data: icons[index],
                                         feedback: Material(
                                           color: Colors.transparent,
@@ -188,46 +179,56 @@ class _DockState extends State<Dock> {
                                         ),
                                         onDragStarted: () => setState(() => draggedIndex = index),
                                         onDragEnd: (_) => setState(() => draggedIndex = -1),
-                                        child: MouseRegion(
-                                          onEnter: (_) {
-                                            if (draggedIndex == -1) {
-                                              setState(() => hoveredIndex = index);
+                                        child: GestureDetector(
+                                          onDoubleTap: () {
+                                            final appLabel = icons[index]['label'];
+                                            if (minimizedApps.contains(appLabel)) {
+                                              restoreApp(appLabel);
+                                            } else {
+                                              minimizeApp(appLabel);
                                             }
                                           },
-                                          onExit: (_) {
-                                            if (draggedIndex == -1) {
-                                              setState(() => hoveredIndex = -1);
-                                            }
-                                          },
-                                          child: TweenAnimationBuilder<double>(
-                                            duration: Duration(milliseconds: 200),
-                                            tween: Tween<double>(
-                                              begin: 48,
-                                              end: hoveredIndex == index ? 64 : 48,
-                                            ),
-                                            builder: (context, size, child) {
-                                              return Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Icon(
-                                                    icons[index]['icon'],
-                                                    size: size,
-                                                    color: Colors.white,
-                                                  ),
-                                                  if (hoveredIndex == index)
-                                                    Padding(
-                                                      padding: const EdgeInsets.only(top: 5.0),
-                                                      child: Text(
-                                                        icons[index]['label']!,
-                                                        style: TextStyle(
-                                                          color: Colors.white,
-                                                          fontSize: 12,
-                                                        ),
-                                                      ),
-                                                    )
-                                                ],
-                                              );
+                                          child: MouseRegion(
+                                            onEnter: (_) {
+                                              if (draggedIndex == -1) {
+                                                setState(() => hoveredIndex = index);
+                                              }
                                             },
+                                            onExit: (_) {
+                                              if (draggedIndex == -1) {
+                                                setState(() => hoveredIndex = -1);
+                                              }
+                                            },
+                                            child: TweenAnimationBuilder<double>(
+                                              duration: const Duration(milliseconds: 300),
+                                              tween: Tween<double>(
+                                                begin: 48,
+                                                end: hoveredIndex == index ? 64 : 48,
+                                              ),
+                                              builder: (context, size, child) {
+                                                return Column(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      icons[index]['icon'],
+                                                      size: size,
+                                                      color: Colors.white,
+                                                    ),
+                                                    if (hoveredIndex == index)
+                                                      Padding(
+                                                        padding: const EdgeInsets.only(top: 5.0),
+                                                        child: Text(
+                                                          icons[index]['label'],
+                                                          style: const TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 12,
+                                                          ),
+                                                        ),
+                                                      )
+                                                  ],
+                                                );
+                                              },
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -247,7 +248,7 @@ class _DockState extends State<Dock> {
                 child: GestureDetector(
                   onTap: () => setState(() => isMinimized = !isMinimized),
                   child: Container(
-                    padding: EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
