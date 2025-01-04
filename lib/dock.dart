@@ -9,13 +9,34 @@ class Dock extends StatefulWidget {
   _DockState createState() => _DockState();
 }
 
-class _DockState extends State<Dock> {
+class _DockState extends State<Dock> with SingleTickerProviderStateMixin {
   int hoveredIndex = -1;
   int draggedIndex = -1;
   List<String> minimizedApps = [];
   bool isMinimized = false;
 
   Map<String, dynamic> tempRemovedIcon = {};
+
+  late AnimationController iconControllerAfterRelease;
+  late Animation<Offset> iconAfterReleaseAnimation;
+
+  Offset iconAfterRealseOffsetEnd = Offset(0, 0);
+  Offset iconAfterRealseOffsetBegin = Offset(0, 0);
+
+  @override
+  void initState() {
+    super.initState();
+    iconControllerAfterRelease = AnimationController(
+      vsync: this,
+      duration: Duration(seconds: 1),
+    );
+    iconAfterReleaseAnimation = Tween<Offset>(
+      begin: iconAfterRealseOffsetBegin,
+      end:
+          iconAfterRealseOffsetEnd, // Offset values in multiples of container size
+    ).animate(CurvedAnimation(
+        parent: iconControllerAfterRelease, curve: Curves.easeInOut));
+  }
 
   void minimizeApp(String app) {
     setState(() {
@@ -178,175 +199,184 @@ class _DockState extends State<Dock> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: List.generate(icons.length, (index) {
-                            return DragTarget<Map<String, dynamic>>(
-                              onAcceptWithDetails: (details) {
-                                print("${details.offset} onAcceptWithDetails");
-                                print("onAcceptWithDetails ${details.data}");
-                                print("onAcceptWithDetails ${details}");
-                                setState(() {
-                                  bool isGettingPlacedOnTheRightSide = false;
-                                  if (icons.indexOf(details.data) < index) {
-                                    isGettingPlacedOnTheRightSide = true;
-                                  }
-                                  icons.remove(details.data);
-
-                                  icons.insert(
-                                      isGettingPlacedOnTheRightSide
-                                          ? index - 1
-                                          : index,
-                                      details.data);
-                                  draggedIndex = -1;
-
-                                  print(
-                                      "isGettingPlacedOnRightSide ${isGettingPlacedOnTheRightSide}");
-                                });
-                              },
-                              onWillAcceptWithDetails: (data) {
-                                print("onWillAcceptWithDetails ${data.data}");
-                                setState(() {
-                                  draggedIndex = index;
-                                  hoveredIndex = index;
-                                });
-
-                                return true;
-                              },
-                              builder: (context, candidateData, rejectedData) {
-                                return AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  curve: Curves.easeInOut,
-                                  padding: EdgeInsets.only(
-                                      bottom: getBottomPadding(index)),
-                                  margin: draggedIndex == index
-                                      ? EdgeInsets.only(
-                                          left: !isInsideDock
-                                              ? 0.0
-                                              : icons.indexOf(icons.last) ==
-                                                      index
-                                                  ? 5.0
-                                                  : 75.0,
-                                          right:
-                                              icons.indexOf(icons.last) == index
-                                                  ? 75.0
-                                                  : 5.0)
-                                      : const EdgeInsets.symmetric(
-                                          horizontal: 5),
-                                  child:
-                                      LongPressDraggable<Map<String, dynamic>>(
-                                    data: icons[index],
-                                    feedback: Material(
-                                      color: Colors.transparent,
-                                      child: Tooltip(
-                                        message: icons[index]['label'],
-                                        child: Container(
-                                          key: GlobalKey(
-                                              debugLabel:
-                                                  "keyOF${icons[index]['label']}"),
-                                          margin: const EdgeInsets.symmetric(
-                                              horizontal: 20.0, vertical: 10.0),
-                                          decoration: BoxDecoration(
-                                            color: hoveredIndex == index
-                                                ? Colors.blue
-                                                : Colors.blue,
-                                            borderRadius:
-                                                BorderRadius.circular(15),
-                                          ),
-                                          child: Padding(
-                                            padding: EdgeInsets.fromLTRB(
-                                                8.0, 8.0, 8.0, 8.0),
-                                            child: Icon(
-                                              icons[index]['icon'],
-                                              size: 40,
-                                              color: Colors.white,
+                            return Tooltip(
+                              preferBelow: false,
+                              margin: const EdgeInsets.only(bottom: 50.0),
+                              // padding: const EdgeInsets.only(bottom: 500.0),
+                                message: icons[index]['label'],
+                                // decoration: ,
+                              child: DragTarget<Map<String, dynamic>>(
+                                onAcceptWithDetails: (details) {
+                                  print("${details.offset} onAcceptWithDetails");
+                                  print("onAcceptWithDetails ${details.data}");
+                                  print("onAcceptWithDetails ${details}");
+                                  setState(() {
+                                    bool isGettingPlacedOnTheRightSide = false;
+                                    if (icons.indexOf(details.data) < index) {
+                                      isGettingPlacedOnTheRightSide = true;
+                                    }
+                                    icons.remove(details.data);
+                              
+                                    icons.insert(
+                                        isGettingPlacedOnTheRightSide
+                                            ? index - 1
+                                            : index,
+                                        details.data);
+                                    draggedIndex = -1;
+                              
+                                    print(
+                                        "isGettingPlacedOnRightSide ${isGettingPlacedOnTheRightSide}");
+                                  });
+                                },
+                                onWillAcceptWithDetails: (data) {
+                                  print("onWillAcceptWithDetails ${data.data}");
+                                  setState(() {
+                                    draggedIndex = index;
+                                    hoveredIndex = index;
+                                  });
+                              
+                                  return true;
+                                },
+                                builder: (context, candidateData, rejectedData) {
+                                  return AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    curve: Curves.easeInOut,
+                                    padding: EdgeInsets.only(
+                                        bottom: getBottomPadding(index)),
+                                    margin: draggedIndex == index
+                                        ? EdgeInsets.only(
+                                            left: !isInsideDock
+                                                ? 0.0
+                                                : icons.indexOf(icons.last) ==
+                                                        index
+                                                    ? 5.0
+                                                    : 75.0,
+                                            right:
+                                                icons.indexOf(icons.last) == index
+                                                    ? 75.0
+                                                    : 5.0)
+                                        : const EdgeInsets.symmetric(
+                                            horizontal: 5),
+                                    child:
+                                        LongPressDraggable<Map<String, dynamic>>(
+                                      data: icons[index],
+                                      feedback: Material(
+                                        color: Colors.transparent,
+                                        child: Tooltip(
+                                          message: icons[index]['label'],
+                                          child: Container(
+                                            key: GlobalKey(
+                                                debugLabel:
+                                                    "keyOF${icons[index]['label']}"),
+                                            margin: const EdgeInsets.symmetric(
+                                                horizontal: 20.0, vertical: 10.0),
+                                            decoration: BoxDecoration(
+                                              color: hoveredIndex == index
+                                                  ? Colors.blue
+                                                  : Colors.blue,
+                                              borderRadius:
+                                                  BorderRadius.circular(15),
+                                            ),
+                                            child: Padding(
+                                              padding: EdgeInsets.fromLTRB(
+                                                  8.0, 8.0, 8.0, 8.0),
+                                              child: Icon(
+                                                icons[index]['icon'],
+                                                size: 40,
+                                                color: Colors.white,
+                                              ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                    childWhenDragging: SizedBox.shrink(),
-                                    onDragStarted: () {
-                                      setState(() {
-                                        tempRemovedIcon = icons[index];
-                                        // icons.remove(icons[index]);
-                                        draggedIndex = index;
-                                      });
-                                    },
-                                    delay: Duration(milliseconds: 100),
-                                    // dragAnchorStrategy:
-                                    //     (draggable, context, position) {
-                                    //   return position;
-                                    // },
-                                    onDragEnd: (details) {
-                                      print("${details.offset}onDragEnd");
-                                      setState(() => draggedIndex = -1);
-                                    },
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        final appLabel = icons[index]['label'];
-                                        if (minimizedApps.contains(appLabel)) {
-                                          restoreApp(appLabel);
-                                        } else {
-                                          minimizeApp(appLabel);
-                                        }
+                                      childWhenDragging: SizedBox.shrink(),
+                                      onDragStarted: () {
+                                        setState(() {
+                                          
+                                          tempRemovedIcon = icons[index];
+                                          // icons.remove(icons[index]);
+                                          draggedIndex = index;
+                                        });
                                       },
-                                      child: MouseRegion(
-                                        onEnter: (_) async{
-                                        await onMouseEnterFromIcon(index);
+                                      delay: Duration(milliseconds: 100),
+                                      // dragAnchorStrategy:
+                                      //     (draggable, context, position) {
+                                      //   return position;
+                                      // },
+                                      onDragEnd: (details) {
+                                        print("${details.offset}onDragEnd");
+                                        setState(() => draggedIndex = -1);
+                                      },
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          final appLabel = icons[index]['label'];
+                                          if (minimizedApps.contains(appLabel)) {
+                                            restoreApp(appLabel);
+                                          } else {
+                                            minimizeApp(appLabel);
+                                          }
                                         },
-                                        onExit: (_) async{
-                                          await onMouseExitFromIcon();
-                                        },
-                                        child: TweenAnimationBuilder<double>(
-                                          duration:
-                                              const Duration(milliseconds: 300),
-                                          tween: Tween<double>(
-                                            begin: 30,
-                                            end: getEndSize(index),
-                                            //  hoveredIndex == index ? 48 : 30,
-                                          ),
-                                          builder: (context, size, child) {
-                                            return Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Container(
-                                                  decoration: BoxDecoration(
-                                                    color: hoveredIndex == index
-                                                        ? Colors.blue
-                                                        : Colors.blue,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            15),
-                                                  ),
-                                                  child: Padding(
-                                                    padding: const EdgeInsets
-                                                        .fromLTRB(
-                                                        8.0, 8.0, 8.0, 8.0),
-                                                    child: Icon(
-                                                      icons[index]['icon'],
-                                                      size: size,
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
-                                                ),
-                                                if (minimizedApps.contains(icons[index]['label']) )
-                                                  Padding(
-                                                    padding:
-                                                        const EdgeInsets.only(
-                                                            top: 5.0),
-                                                    child: Icon(
-                                                      Icons.circle,
-                                                      size: 5,
-                                                      color: Colors.white,
-                                                    ),
-                                                  )
-                                              ],
-                                            );
+                                        child: MouseRegion(
+                                          onEnter: (_) async {
+                                            await onMouseEnterFromIcon(index);
                                           },
+                                          onExit: (_) async {
+                                            await onMouseExitFromIcon();
+                                          },
+                                          child: TweenAnimationBuilder<double>(
+                                            duration:
+                                                const Duration(milliseconds: 300),
+                                            tween: Tween<double>(
+                                              begin: 30,
+                                              end: getEndSize(index),
+                                              //  hoveredIndex == index ? 48 : 30,
+                                            ),
+                                            builder: (context, size, child) {
+                                              return Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Container(
+                                                    decoration: BoxDecoration(
+                                                      color: hoveredIndex == index
+                                                          ? Colors.blue
+                                                          : Colors.blue,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              15),
+                                                    ),
+                                                    child: Padding(
+                                                      padding: const EdgeInsets
+                                                          .fromLTRB(
+                                                          8.0, 8.0, 8.0, 8.0),
+                                                      child: Icon(
+                                                        icons[index]['icon'],
+                                                        size: size,
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  if (minimizedApps.contains(
+                                                      icons[index]['label']))
+                                                    Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                              top: 5.0),
+                                                      child: Icon(
+                                                        Icons.circle,
+                                                        size: 5,
+                                                        color: Colors.white,
+                                                      ),
+                                                    )
+                                                ],
+                                              );
+                                            },
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                );
-                              },
+                                  );
+                                },
+                              ),
                             );
                           }),
                         ),
@@ -376,7 +406,7 @@ class _DockState extends State<Dock> {
     return bottomPadding;
   }
 
-   onMouseExitFromIcon()async {
+  onMouseExitFromIcon() async {
     // await Future.delayed(Duration(milliseconds: 100));
     //  if (draggedIndex == -1) {
     setState(() {
@@ -387,7 +417,7 @@ class _DockState extends State<Dock> {
     // }
   }
 
-   onMouseEnterFromIcon(int index)async {
+  onMouseEnterFromIcon(int index) async {
     // await Future.delayed(Duration(milliseconds: 400));
     //  if (draggedIndex == -1) {
     setState(() {
